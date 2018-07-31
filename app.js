@@ -5,8 +5,9 @@ const bodyParser = require('body-parser')
 const expressValidator = require('express-validator')
 const flash = require('connect-flash')
 const session = require('express-session')
-
-mongoose.connect('mongodb://localhost/node-express')
+const config = require('./config/database')
+const passport = require('passport')
+mongoose.connect(config.database)
 const db = mongoose.connection;
 
 // cehck connection 
@@ -73,6 +74,21 @@ app.use(expressValidator({
 	}
 }));
 
+
+require('./config/passport')(passport);
+
+
+// Passport Middleware
+ app.use(passport.initialize());
+  app.use(passport.session());
+
+app.get('*', function(req, res, next){
+	res.locals.user = req.user || null;
+	next();
+	console.log(req.user)
+})
+
+
 // Home Route
 app.get('/', function(req,res) {
 	Article.find({}, function(err, articles) {
@@ -88,89 +104,14 @@ app.get('/', function(req,res) {
 	})
 })
 
-// Get single route
-app.get('/article/:id', function(req,res) {
-	Article.findById(req.params.id, function(err, article) {
-	res.render('article',{
-		article: article
-	})	
-	})
-})
-// Add Articles Route
-app.get('/articles/add', function(req,res) {
-	res.render('add_article',{
-		title: 'Add Articles'
-	})
-})
-// Edit article form
-app.get('/article/edit/:id', function(req,res) {
-	Article.findById(req.params.id, function(err, article) {
-	res.render('edit_article',{
-		title: 'Edit Article',
-		article: article
-	})	
-	})
-})
-app.delete('/article/:id', function(req,res) {
-	let query = {_id: req.params.id};
-	Article.remove(query, function(err) {
-		if(err) {
-			console.log(err)
-		}
-		req.flash('danger', 'Article Removed')
-		res.send('Success')
-	})
-})
-//  Add Submit POST Route
-app.post('/articles/add', function(req,res) {
-	req.checkBody('title', 'Title is required').notEmpty();
-	req.checkBody('author', 'Author is required').notEmpty();
-	req.checkBody('body', 'Body is required').notEmpty();
+// Articles Routes
+let articles = require('./routes/articles')
+app.use('/articles', articles)
 
-	let errors = req.validationErrors();
+// Users Routes
+let users = require('./routes/users')
+app.use('/users', users)
 
-	if(errors) {
-		res.render('add_article', {
-			title: 'Add Article',
-			errors: errors
-		})
-	}
-	else {
-
-	let article = new Article();
-	article.title = req.body.title;
-	article.author = req.body.author;
-	article.body = req.body.body;
-	article.save(function(err) {
-		if(err) {
-			console.log(err)
-			return;
-		}
-		else {
-			req.flash('success', 'Article Added')
-			res.redirect('/')
-		}
-	})
-	}	
-})
-//  update article route
-app.post('/article/edit/:id', function(req,res) {
-	let article = {};
-	article.title = req.body.title;
-	article.author = req.body.author;
-	article.body = req.body.body;
-	let query = {_id:req.params.id}
-	Article.update(query, article, function(err) {
-		if(err) {
-			console.log(err)
-			return;
-		}
-		else {
-			req.flash('info', 'Article Updated')
-			res.redirect('/')
-		}
-	})	
-})
 
 // Start Server
 app.listen(3000, ()=> {

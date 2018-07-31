@@ -2,7 +2,9 @@ extends layout
 
 block content
 	h1= article.title
-	h6 Creted by #{article.author}
+	h6 Creted by #{author}
 	p= article.body
-	a.btn.btn-primary(href="/article/edit/" + article._id) Edit
-	a.btn.btn-danger.delete-article.ml-2(href="#", data-id=article._id) Remove
+	if user
+		if user.id === article.author
+			a.btn.btn-primary(href="/articles/edit/" + article._id) Edit
+			a.btn.btn-danger.delete-article.ml-2(href="#", data-id=article._id) Remove
